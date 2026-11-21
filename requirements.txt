@@ -1,0 +1,18 @@
+# Core data handling and ML
+numpy>=1.26
+pandas>=2.1
+scikit-learn>=1.4
+torch>=2.2
+
+# Federated learning
+flwr[simulation]>=1.8
+
+# Differential privacy for PyTorch models
+opacus>=1.4
+
+# Configuration, reporting, and plots
+PyYAML>=6.0
+matplotlib>=3.8
+
+# Secure-communication utilities (TLS itself can use Python's ssl module)
+cryptography>=42.0
