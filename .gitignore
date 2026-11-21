@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data and generated outputs
+data/
+outputs/
+*.csv
+*.parquet
+*.pkl
+*.joblib
+*.pt
+*.pth
+*.ckpt
+
+# Secrets and certificates
+*.key
+*.pem
+*.crt
+secrets/
