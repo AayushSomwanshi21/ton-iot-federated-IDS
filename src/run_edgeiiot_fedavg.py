@@ -20,7 +20,7 @@ from src.server.fedavg import train_fedavg
 # --------------------
 # Configuration
 # --------------------
-NUM_ROUNDS = 5
+NUM_ROUNDS = 20
 LOCAL_EPOCHS = 1
 BATCH_SIZE = 256
 LEARNING_RATE = 0.001
