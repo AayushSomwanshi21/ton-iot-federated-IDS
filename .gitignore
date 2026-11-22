@@ -25,3 +25,4 @@ outputs/
 *.pem
 *.crt
 secrets/
+local_certs/
