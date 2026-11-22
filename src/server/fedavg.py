@@ -1,4 +1,5 @@
 import copy
+import time
 from pathlib import Path
 
 import numpy as np
@@ -62,6 +63,8 @@ def train_fedavg(
     learning_rate=0.001,
     threshold=0.5,
     checkpoint_path=None,
+    use_tls=False,
+    measure_timing=False,
 ):
     """
     Run FedAvg and select the model with the highest validation F1.
@@ -74,6 +77,9 @@ def train_fedavg(
         criterion: Loss function, e.g. BCEWithLogitsLoss.
         device: torch.device.
         checkpoint_path: Optional path to save the best validation checkpoint.
+        use_tls: Send client updates through the TLS round-trip server.
+        measure_timing: Collect local training, communication, aggregation,
+            validation, and total FedAvg timing fields.
 
     Returns:
         A dict with the restored best model, selected round, validation
@@ -81,6 +87,14 @@ def train_fedavg(
     """
     if not clients:
         raise ValueError("No clients were provided.")
+
+    fedavg_start = time.perf_counter() if measure_timing else None
+    timing = {
+        "local_training_seconds": 0.0,
+        "communication_seconds": 0.0,
+        "aggregation_seconds": 0.0,
+        "validation_seconds": 0.0,
+    } if measure_timing else None
 
     device = torch.device(device)
     global_model = global_model.to(device)
@@ -111,6 +125,9 @@ def train_fedavg(
             # Each client starts from the same current global model.
             local_model = copy.deepcopy(global_model).to(device)
 
+            if measure_timing and torch.cuda.is_available():
+                torch.cuda.synchronize(device)
+            local_start = time.perf_counter() if measure_timing else None
             client_state, client_size = train_client(
                 model=local_model,
                 X_train=client["X_train_scaled"],
@@ -121,23 +138,44 @@ def train_fedavg(
                 batch_size=batch_size,
                 learning_rate=learning_rate,
             )
+            if measure_timing:
+                if torch.cuda.is_available():
+                    torch.cuda.synchronize(device)
+                timing["local_training_seconds"] += (
+                    time.perf_counter() - local_start
+                )
 
-            # Send the trained client update through the TLS server before aggregation.
-            client_state = tls_round_trip_state_dict(client_state)
+            communication_start = (
+                time.perf_counter() if measure_timing else None
+            )
+            if use_tls:
+                client_state = tls_round_trip_state_dict(client_state)
+            if measure_timing:
+                timing["communication_seconds"] += (
+                    time.perf_counter() - communication_start
+                )
             client_states.append(client_state)
             client_sizes.append(client_size)
 
             del local_model
 
         # Aggregate client models using their training-set sizes.
+        aggregation_start = time.perf_counter() if measure_timing else None
         aggregated_state = _weighted_average_states(
             client_states,
             client_sizes,
         )
         global_model.load_state_dict(aggregated_state)
         global_model.to(device)
+        if measure_timing:
+            if torch.cuda.is_available():
+                torch.cuda.synchronize(device)
+            timing["aggregation_seconds"] += (
+                time.perf_counter() - aggregation_start
+            )
 
         # Validation is used to select the checkpoint.
+        validation_start = time.perf_counter() if measure_timing else None
         global_model.eval()
         with torch.no_grad():
             val_logits = global_model(X_val_tensor).reshape(-1)
@@ -176,6 +214,12 @@ def train_fedavg(
                 key: tensor.detach().cpu().clone()
                 for key, tensor in global_model.state_dict().items()
             }
+        if measure_timing:
+            if torch.cuda.is_available():
+                torch.cuda.synchronize(device)
+            timing["validation_seconds"] += (
+                time.perf_counter() - validation_start
+            )
 
     if best_state is None:
         raise RuntimeError("Training finished without selecting a checkpoint.")
@@ -204,10 +248,15 @@ def train_fedavg(
             checkpoint_path,
         )
 
-    return {
+    result = {
         "model": global_model,
         "best_round": best_round,
         "best_val_f1": best_val_f1,
         "best_validation_metrics": best_metrics,
         "history": history,
     }
+    if measure_timing:
+        timing["fedavg_seconds"] = time.perf_counter() - fedavg_start
+        result["timing"] = timing
+
+    return result

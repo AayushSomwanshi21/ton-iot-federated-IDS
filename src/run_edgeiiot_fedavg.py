@@ -1,5 +1,13 @@
+import argparse
 import json
+import sys
+import time
+from datetime import datetime
 from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 import numpy as np
 import torch
@@ -26,16 +34,53 @@ BATCH_SIZE = 256
 LEARNING_RATE = 0.001
 THRESHOLD = 0.5
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "edgeiiot_fedavg_tls"
-CHECKPOINT_PATH = OUTPUT_DIR / "best_model.pt"
-METRICS_PATH = OUTPUT_DIR / "metrics.json"
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print("Using device:", device)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Run FedAvg for Edge-IIoTset."
+    )
+    parser.add_argument(
+        "--tls",
+        action="store_true",
+        help="Send each client model update through the TLS server.",
+    )
+    parser.add_argument(
+        "--timing",
+        action="store_true",
+        help="Measure training and communication time.",
+    )
+    return parser.parse_args()
 
 
 def main():
+    args = parse_args()
+    experiment_start = time.perf_counter()
+    print("Using device:", device)
+    print("TLS:", "enabled" if args.tls else "disabled")
+    print("Timing:", "enabled" if args.timing else "disabled")
+
+    transport_name = "tls" if args.tls else "no_tls"
+    if args.timing:
+        run_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = (
+            PROJECT_ROOT
+            / "outputs"
+            / "benchmarks"
+            / f"edgeiiot_fedavg_{transport_name}"
+            / run_stamp
+        )
+    else:
+        output_dir = (
+            PROJECT_ROOT
+            / "outputs"
+            / f"edgeiiot_fedavg_{transport_name}"
+        )
+
+    checkpoint_path = output_dir / "best_model.pt"
+    metrics_path = output_dir / "metrics.json"
+
     # Load, split, scale, and partition the data.
     data = load_and_prepare_edgeiiot()
     print("Number of features:", len(data["feature_names"]))
@@ -80,7 +125,9 @@ def main():
         batch_size=BATCH_SIZE,
         learning_rate=LEARNING_RATE,
         threshold=THRESHOLD,
-        checkpoint_path=CHECKPOINT_PATH,
+        checkpoint_path=checkpoint_path,
+        use_tls=args.tls,
+        measure_timing=args.timing,
     )
 
     best_model = result["model"]
@@ -122,10 +169,18 @@ def main():
             y_test_array, test_preds
         ).tolist(),
         "validation_history": result["history"],
+        "transport": "tls" if args.tls else "no_tls",
+        "timing_enabled": args.timing,
     }
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    with METRICS_PATH.open("w", encoding="utf-8") as file:
+    if args.timing:
+        metrics["timing"] = {
+            **result["timing"],
+            "experiment_total_seconds": time.perf_counter() - experiment_start,
+        }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    with metrics_path.open("w", encoding="utf-8") as file:
         json.dump(metrics, file, indent=2)
 
     print("\nBest validation round:", result["best_round"])
@@ -135,8 +190,8 @@ def main():
         if name != "validation_history":
             print(f"{name}: {value}")
 
-    print(f"\nCheckpoint saved to: {CHECKPOINT_PATH}")
-    print(f"Metrics saved to:    {METRICS_PATH}")
+    print(f"\nCheckpoint saved to: {checkpoint_path}")
+    print(f"Metrics saved to:    {metrics_path}")
 
 
 if __name__ == "__main__":
