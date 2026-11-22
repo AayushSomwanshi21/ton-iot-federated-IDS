@@ -19,7 +19,7 @@ from src.models.binary_classifier import BinaryClassifier
 
 
 # Match the centralized baseline.
-EPOCHS = 5
+EPOCHS = 100
 BATCH_SIZE = 256
 LEARNING_RATE = 0.001
 THRESHOLD = 0.5

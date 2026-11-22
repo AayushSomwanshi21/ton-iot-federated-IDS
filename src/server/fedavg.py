@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from sklearn.metrics import f1_score, precision_score, recall_score
-
+from src.security.tls_update_client import tls_round_trip_state_dict
 from src.clients.train import train_client
 
 
@@ -122,8 +122,11 @@ def train_fedavg(
                 learning_rate=learning_rate,
             )
 
+            # Send the trained client update through the TLS server before aggregation.
+            client_state = tls_round_trip_state_dict(client_state)
             client_states.append(client_state)
             client_sizes.append(client_size)
+
             del local_model
 
         # Aggregate client models using their training-set sizes.

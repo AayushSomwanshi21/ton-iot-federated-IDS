@@ -20,14 +20,14 @@ from src.server.fedavg import train_fedavg
 # --------------------
 # Configuration
 # --------------------
-NUM_ROUNDS = 20
-LOCAL_EPOCHS = 1
+NUM_ROUNDS = 10
+LOCAL_EPOCHS = 5
 BATCH_SIZE = 256
 LEARNING_RATE = 0.001
 THRESHOLD = 0.5
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "edgeiiot_fedavg"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "edgeiiot_fedavg_tls"
 CHECKPOINT_PATH = OUTPUT_DIR / "best_model.pt"
 METRICS_PATH = OUTPUT_DIR / "metrics.json"
 
