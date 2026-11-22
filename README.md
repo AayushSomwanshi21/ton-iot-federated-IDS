@@ -16,5 +16,9 @@ Project workspace for an IoT intrusion detection system using federated learning
 
 ## Getting started
 
-Add project dependencies to `requirements.txt` and install them in your preferred
-Python environment. Keep datasets and generated results in `data/` and `outputs/`.
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
