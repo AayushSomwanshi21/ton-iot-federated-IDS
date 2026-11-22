@@ -1,3 +1,16 @@
+from src.server.fedavg import train_fedavg
+from src.models.binary_classifier import BinaryClassifier
+from src.dataset.edgeiiot import load_and_prepare_edgeiiot
+from torch import nn
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+)
+import torch
+import numpy as np
 import argparse
 import json
 import sys
@@ -8,21 +21,6 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
-
-import numpy as np
-import torch
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    confusion_matrix,
-)
-from torch import nn
-
-from src.data.edgeiiot import load_and_prepare_edgeiiot
-from src.models.binary_classifier import BinaryClassifier
-from src.server.fedavg import train_fedavg
 
 
 # --------------------

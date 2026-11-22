@@ -14,7 +14,7 @@ from sklearn.metrics import (
     confusion_matrix,
 )
 
-from src.data.edgeiiot import load_and_prepare_edgeiiot
+from src.dataset.edgeiiot import load_and_prepare_edgeiiot
 from src.models.binary_classifier import BinaryClassifier
 
 
