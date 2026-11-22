@@ -4,6 +4,13 @@ pandas>=2.1
 scikit-learn>=1.4
 torch>=2.2
 
+# NVIDIA GPU support
+# Install PyTorch with a CUDA build separately, selecting the build that
+# matches the NVIDIA driver and CUDA compatibility of the target machine:
+#   pip uninstall -y torch
+#   pip install torch --index-url https://download.pytorch.org/whl/cu121
+# Use cu118 or cu124 instead for CUDA 11.8 or 12.4 systems.
+
 # Federated learning
 flwr[simulation]>=1.8
 
